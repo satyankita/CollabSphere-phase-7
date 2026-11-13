@@ -1,10 +1,12 @@
-
 const express = require("express");
 const Project = require("../models/Project");
+const User = require("../models/User");
 const authMiddleware = require("../middleware/authMiddleware");
+const Activity = require("../models/Activity");
 
 const router = express.Router();
 
+// Get all projects for logged-in user
 router.get("/", authMiddleware, async (req, res) => {
   try {
     const projects = await Project.find({
@@ -76,10 +78,11 @@ router.put("/:id", authMiddleware, async (req, res) => {
   }
 });
 
+
 // Delete project
 router.delete("/:id", authMiddleware, async (req, res) => {
   try {
-    const project = await Project.findOneAndDelete({
+    const project = await Project.findOne({
       _id: req.params.id,
       owner: req.userId,
     });
@@ -90,9 +93,133 @@ router.delete("/:id", authMiddleware, async (req, res) => {
       });
     }
 
-    res.json({ message: "Project deleted successfully!" });
+    // Save activity before deleting the project
+    await Activity.create({
+      project: project._id,
+      projectName: project.name,
+      user: req.userId,
+      action: "project_deleted",
+      description: `Deleted project: ${project.name}`,
+    });
+
+    // Delete project
+    await Project.findByIdAndDelete(project._id);
+
+    res.json({
+      message: "Project deleted successfully!",
+    });
   } catch (error) {
-    res.status(500).json({ message: "Could not delete project" });
+    console.error("Delete project error:", error);
+    res.status(500).json({
+      message: "Could not delete project",
+    });
+  }
+});
+
+// Get project team members
+router.get("/:id/members", authMiddleware, async (req, res) => {
+  try {
+    const project = await Project.findOne({
+      _id: req.params.id,
+      members: req.userId,
+    }).populate("members", "name email");
+
+    if (!project) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    res.json(project.members);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Add an existing registered user by email
+router.post("/:id/invite", authMiddleware, async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email || !email.trim()) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    const project = await Project.findOne({
+      _id: req.params.id,
+      owner: req.userId,
+    });
+
+    if (!project) {
+      return res.status(404).json({
+        message: "Project not found or you are not the owner",
+      });
+    }
+
+    const invitedUser = await User.findOne({
+      email: email.trim().toLowerCase(),
+    });
+
+    if (!invitedUser) {
+      return res.status(404).json({
+        message: "No registered user found with this email",
+      });
+    }
+
+    if (project.members.some(
+      (member) => member.toString() === invitedUser._id.toString()
+    )) {
+      return res.status(400).json({
+        message: "User is already a project member",
+      });
+    }
+
+    project.members.push(invitedUser._id);
+    await project.save();
+
+    res.json({
+      message: `${invitedUser.name} added to the project successfully`,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Remove a team member
+router.delete("/:id/members/:userId", authMiddleware, async (req, res) => {
+  try {
+    const project = await Project.findOne({
+      _id: req.params.id,
+      owner: req.userId,
+    });
+
+    if (!project) {
+      return res.status(404).json({
+        message: "Project not found or you are not the owner",
+      });
+    }
+
+    if (req.params.userId === req.userId.toString()) {
+      return res.status(400).json({
+        message: "Project owner cannot be removed",
+      });
+    }
+
+    const originalLength = project.members.length;
+
+    project.members = project.members.filter(
+      (member) => member.toString() !== req.params.userId
+    );
+
+    if (project.members.length === originalLength) {
+      return res.status(404).json({
+        message: "Team member not found",
+      });
+    }
+
+    await project.save();
+
+    res.json({ message: "Team member removed successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
 
