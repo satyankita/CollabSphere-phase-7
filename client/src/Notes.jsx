@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { Plus, Pencil, Trash2, Save, X, FileText } from "lucide-react";
 
-const API_URL = "http://localhost:5000/api/notes";
+const API_URL = "https://collabsphere-api-70ke.onrender.com/api/notes";
 
 function Notes() {
   const [notes, setNotes] = useState([]);

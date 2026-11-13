@@ -20,7 +20,7 @@ export default function Auth({ onLogin }) {
       const endpoint = isLogin ? "login" : "signup";
 
       const response = await axios.post(
-        `http://localhost:5000/api/auth/${endpoint}`,
+        `https://collabsphere-api-70ke.onrender.com/api/auth/${endpoint}`,
         { name, email, password }
       );
 

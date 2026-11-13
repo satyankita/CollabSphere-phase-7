@@ -11,7 +11,7 @@ function Projects() {
 
     try {
       const response = await axios.post(
-        "http://localhost:5000/api/projects",
+        "https://collabsphere-api-70ke.onrender.com/api/projects",
         {
           name,
           description,

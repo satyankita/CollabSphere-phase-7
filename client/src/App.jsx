@@ -29,9 +29,9 @@ import {
 
 import "./App.css";
 
-const API_URL = "http://localhost:5000/api/projects";
-const AI_API_URL = "http://localhost:5000/api/ai";
-const FILE_API_URL = "http://localhost:5000/api/files";
+const API_URL = "https://collabsphere-api-70ke.onrender.com/api/projects";
+const AI_API_URL = "https://collabsphere-api-70ke.onrender.com/api/ai";
+const FILE_API_URL = "https://collabsphere-api-70ke.onrender.com/api/files";
 
 function App() {
   const [active, setActive] = useState("Overview");
@@ -199,7 +199,7 @@ const fetchActivities = async () => {
     setActivityMessage("");
 
     const response = await axios.get(
-      "http://localhost:5000/api/activities",
+      "https://collabsphere-api-70ke.onrender.com/api/activities",
       getAuthConfig()
     );
 
@@ -228,7 +228,7 @@ const fetchActivities = async () => {
 const logActivity = async (projectId, action, description) => {
   try {
     await axios.post(
-      `http://localhost:5000/api/activities/${projectId}`,
+      `https://collabsphere-api-70ke.onrender.com/api/activities/${projectId}`,
       { action, description },
       getAuthConfig()
     );
