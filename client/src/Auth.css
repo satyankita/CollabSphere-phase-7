@@ -1,70 +1,121 @@
 
 .auth-page {
   min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background: linear-gradient(135deg, #f4efff, #e8e7ff, #fdf2f8);
-  font-family: Arial, sans-serif;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(420px, 0.82fr);
+  background: #f2f5f0;
+  color: #19332c;
+  font-family: "DM Sans", sans-serif;
+}
+
+.auth-page::before {
+  content: "";
+  grid-column: 1;
+  grid-row: 1;
+  background-color: #173a30;
+  background-image:
+    linear-gradient(rgba(222, 241, 201, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(222, 241, 201, 0.055) 1px, transparent 1px),
+    radial-gradient(ellipse at 25% 80%, rgba(153, 191, 101, 0.16), transparent 48%);
+  background-size: 42px 42px, 42px 42px, auto;
+}
+
+.auth-page::after {
+  content: "COLLABORATE\A BUILD\A SHIP.";
+  grid-column: 1;
+  grid-row: 1;
+  align-self: center;
+  justify-self: center;
+  width: min(76%, 520px);
+  color: #f2f6eb;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: clamp(42px, 5vw, 72px);
+  font-weight: 600;
+  line-height: 1.04;
+  white-space: pre;
+  text-shadow: 0 15px 50px rgba(4, 25, 16, 0.15);
 }
 
 .auth-card {
-  width: 100%;
-  max-width: 420px;
-  padding: 36px;
-  background: white;
-  border: 1px solid #e8defb;
-  border-radius: 22px;
-  box-shadow: 0 18px 50px #6550a51a;
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
+  justify-self: center;
+  width: min(100% - 64px, 430px);
+  padding: 20px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .auth-card h1 {
-  color: #7054c5;
-  text-align: center;
-  margin-bottom: 8px;
+  margin: 0 0 8px;
+  color: #1d4939;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-align: left;
 }
 
 .auth-card > p {
-  color: #777187;
-  text-align: center;
-  margin-bottom: 28px;
+  margin: 0 0 43px;
+  color: #74837b;
+  font-size: 13px;
+  text-align: left;
 }
 
 .auth-card h2 {
-  color: #28243b;
-  font-size: 22px;
-  margin-bottom: 20px;
+  margin-bottom: 8px;
+  color: #19332c;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.auth-card h2 + input {
+  margin-top: 20px;
 }
 
 .auth-card input {
   width: 100%;
-  box-sizing: border-box;
-  padding: 13px 14px;
-  margin-bottom: 14px;
-  border: 1px solid #ddd6eb;
-  border-radius: 10px;
-  font-size: 14px;
+  min-height: 48px;
+  margin: 0 0 13px;
+  padding: 0 14px;
+  border: 1px solid #dce5dc;
+  border-radius: 7px;
+  background: #fff;
+  color: #19332c;
+  font-size: 13px;
+}
+
+.auth-card input::placeholder {
+  color: #98a49c;
 }
 
 .auth-card input:focus {
-  outline: 2px solid #b9a6f5;
-  border-color: #8d73df;
+  border-color: #9abb67;
+  outline: 3px solid rgba(167, 206, 80, 0.16);
 }
 
 .auth-card button {
   width: 100%;
-  padding: 14px;
-  border: none;
-  border-radius: 10px;
-  background: #7658cf;
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
+  min-height: 48px;
+  margin-top: 9px;
+  border: 0;
+  border-radius: 7px;
+  background: #a7ce50;
+  color: #1c382d;
+  font-size: 13px;
+  font-weight: 700;
+  transition: background 160ms ease, transform 160ms ease;
 }
 
 .auth-card button:hover {
-  background: #6042b7;
+  background: #b7d96c;
+  transform: translateY(-1px);
 }
 
 .auth-card button:disabled {
@@ -73,19 +124,56 @@
 }
 
 .auth-message {
-  color: #bd2d45;
-  font-size: 14px;
   margin: 4px 0 14px;
+  color: #b54d42;
+  font-size: 13px;
 }
 
-.auth-switch {
-  font-size: 14px;
-  margin-top: 22px;
+.auth-card > .auth-switch {
+  margin: 24px 0 0;
+  color: #74837b;
+  font-size: 13px;
   text-align: center;
 }
 
 .auth-switch span {
-  color: #7054c5;
-  font-weight: bold;
+  color: #527a3b;
+  font-weight: 700;
   cursor: pointer;
+}
+
+@media (max-width: 760px) {
+  .auth-page {
+    min-height: 100svh;
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(190px, 30svh) 1fr;
+  }
+
+  .auth-page::before,
+  .auth-page::after {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .auth-page::after {
+    width: calc(100% - 48px);
+    font-size: clamp(35px, 9vw, 54px);
+  }
+
+  .auth-card {
+    grid-column: 1;
+    grid-row: 2;
+    width: min(100% - 48px, 430px);
+    padding: 36px 0 48px;
+  }
+
+  .auth-card > p {
+    margin-bottom: 30px;
+  }
+}
+
+@media (max-width: 380px) {
+  .auth-card {
+    width: calc(100% - 36px);
+  }
 }
