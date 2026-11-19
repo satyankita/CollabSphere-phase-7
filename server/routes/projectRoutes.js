@@ -1,10 +1,35 @@
 const express = require("express");
+const crypto = require("crypto");
 const Project = require("../models/Project");
 const User = require("../models/User");
+const Note = require("../models/Note");
+const File = require("../models/File");
 const authMiddleware = require("../middleware/authMiddleware");
 const Activity = require("../models/Activity");
 
 const router = express.Router();
+
+// Public, read-only project data for an unguessable share token.
+router.get("/public/:token", async (req, res) => {
+  try {
+    const project = await Project.findOne({ shareToken: req.params.token })
+      .select("name description createdAt");
+    if (!project) return res.status(404).json({ message: "Shared project not found" });
+
+    const [notes, files] = await Promise.all([
+      Note.find({ project: project._id })
+        .select("title content updatedAt")
+        .sort({ updatedAt: -1 }),
+      File.find({ project: project._id })
+        .select("fileName mimeType size createdAt")
+        .sort({ createdAt: -1 }),
+    ]);
+
+    res.json({ project, notes, files });
+  } catch (error) {
+    res.status(500).json({ message: "Could not load shared project" });
+  }
+});
 
 // Get all projects for logged-in user
 router.get("/", authMiddleware, async (req, res) => {
@@ -75,6 +100,58 @@ router.put("/:id", authMiddleware, async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: "Could not update project" });
+  }
+});
+
+// Create or revoke the public read-only share link. Only the owner can manage it.
+router.post("/:id/share", authMiddleware, async (req, res) => {
+  try {
+    const project = await Project.findOne({ _id: req.params.id, owner: req.userId });
+    if (!project) {
+      return res.status(404).json({ message: "Project not found or you are not the owner" });
+    }
+
+    if (req.body.enabled === false) {
+      project.shareToken = undefined;
+      await project.save();
+      return res.json({ enabled: false });
+    }
+
+    if (!project.shareToken) {
+      project.shareToken = crypto.randomBytes(24).toString("hex");
+      await project.save();
+    }
+    res.json({ enabled: true, token: project.shareToken });
+  } catch (error) {
+    res.status(500).json({ message: "Could not update share link" });
+  }
+});
+
+// Notes and uploaded file counts by project member.
+router.get("/:id/contributions", authMiddleware, async (req, res) => {
+  try {
+    const project = await Project.findOne({
+      _id: req.params.id,
+      $or: [{ owner: req.userId }, { members: req.userId }],
+    });
+    if (!project) return res.status(404).json({ message: "Project not found or access denied" });
+
+    const members = await User.find({ _id: { $in: project.members } }).select("name email");
+    const contributions = await Promise.all(members.map(async (member) => {
+      const [notesCreated, filesUploaded] = await Promise.all([
+        Note.countDocuments({ project: project._id, user: member._id }),
+        File.countDocuments({ project: project._id, uploadedBy: member._id }),
+      ]);
+      return {
+        member: { _id: member._id, name: member.name, email: member.email },
+        notesCreated,
+        filesUploaded,
+      };
+    }));
+
+    res.json({ contributions });
+  } catch (error) {
+    res.status(500).json({ message: "Could not load contribution analytics" });
   }
 });
 

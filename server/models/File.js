@@ -10,6 +10,14 @@ const fileSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    mimeType: {
+      type: String,
+      default: "application/octet-stream",
+    },
+    size: {
+      type: Number,
+      default: 0,
+    },
     project: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Project",

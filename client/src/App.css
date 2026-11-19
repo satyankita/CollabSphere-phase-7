@@ -3003,3 +3003,155 @@ body,
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+.note-ai-actions,
+.share-project-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.notes-editor .markdown-toolbar button {
+  cursor: pointer;
+}
+
+.notes-editor .markdown-toolbar button:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.notes-editor .markdown-preview {
+  margin-bottom: 12px;
+}
+
+.note-content.markdown-preview {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.notes-editor .note-ai-actions + .ai-result {
+  margin-bottom: 14px;
+}
+
+.contribution-panel {
+  display: block;
+  margin: 20px 0;
+}
+
+.contribution-table-wrap {
+  overflow-x: auto;
+}
+
+.contribution-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.contribution-table th,
+.contribution-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.contribution-table th {
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.share-project-card {
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.share-project-card .settings-info {
+  flex: 1 1 320px;
+}
+
+.share-project-card input {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.file-preview-modal {
+  width: min(900px, 94vw);
+  max-height: 88vh;
+  overflow: auto;
+}
+
+.file-preview-image {
+  display: block;
+  max-width: 100%;
+  max-height: 65vh;
+  margin: 0 auto;
+  object-fit: contain;
+}
+
+.file-preview-text {
+  max-height: 60vh;
+  overflow: auto;
+  padding: 16px;
+  border-radius: 8px;
+  background: var(--surface);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.public-project-page {
+  min-height: 100vh;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 36px 24px 64px;
+  color: var(--text);
+}
+
+.public-project-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  padding: 28px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.public-project-header h1 {
+  margin: 14px 0 8px;
+}
+
+.public-project-header p {
+  color: var(--muted);
+}
+
+.public-project-section {
+  margin-top: 28px;
+}
+
+.public-note-card {
+  margin: 14px 0;
+  background: var(--surface);
+}
+
+.public-project-page li {
+  margin: 8px 0;
+}
+
+@media (max-width: 640px) {
+  .public-project-page {
+    padding: 20px 14px 40px;
+  }
+
+  .public-project-header {
+    flex-direction: column;
+    padding: 20px;
+  }
+
+  .markdown-toolbar {
+    flex-wrap: wrap;
+  }
+}

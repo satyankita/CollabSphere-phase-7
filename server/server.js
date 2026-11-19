@@ -19,7 +19,8 @@ app.use(express.json());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/projects", projectRoutes);
-app.use("/api/ai", aiRoutes);
+app.use("/api/gemini", aiRoutes);
+app.use("/api/ai", aiRoutes); // Backward-compatible aliases
 app.use("/api/notes", noteRoutes);
 app.use("/api/files", fileRoutes);
 app.use("/api/activities", activityRoutes);

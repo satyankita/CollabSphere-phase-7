@@ -1,6 +1,7 @@
 
 import React, { useState } from "react";
 import axios from "axios";
+import { API_ROOT } from "./api";
 
 function Projects() {
   const [name, setName] = useState("");
@@ -11,7 +12,7 @@ function Projects() {
 
     try {
       const response = await axios.post(
-        "https://collabsphere-api-70ke.onrender.com/api/projects",
+        `${API_ROOT}/projects`,
         {
           name,
           description,

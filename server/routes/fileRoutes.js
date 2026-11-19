@@ -41,6 +41,8 @@ router.post(
       const newFile = await File.create({
         fileName: req.file.originalname,
         filePath: req.file.path,
+        mimeType: req.file.mimetype,
+        size: req.file.size,
         project: project._id,
         uploadedBy: req.userId,
       });

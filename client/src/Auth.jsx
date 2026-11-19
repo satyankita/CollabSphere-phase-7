@@ -1,6 +1,7 @@
 
 import { useState } from "react";
 import axios from "axios";
+import { API_ROOT } from "./api";
 import "./Auth.css";
 
 export default function Auth({ onLogin }) {
@@ -20,7 +21,7 @@ export default function Auth({ onLogin }) {
       const endpoint = isLogin ? "login" : "signup";
 
       const response = await axios.post(
-        `https://collabsphere-api-70ke.onrender.com/api/auth/${endpoint}`,
+        `${API_ROOT}/auth/${endpoint}`,
         { name, email, password }
       );
 

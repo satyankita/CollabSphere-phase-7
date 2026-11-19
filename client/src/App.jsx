@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import Auth from "./Auth";
 import Notes from "./Notes";
+import ReactMarkdown from "react-markdown";
+import { API_ROOT } from "./api";
 
 import {
   LayoutDashboard,
@@ -25,13 +27,16 @@ import {
   Download,
   X,
   Activity,
+  Eye,
+  Copy,
+  Share2,
 } from "lucide-react";
 
 import "./App.css";
 
-const API_URL = "https://collabsphere-api-70ke.onrender.com/api/projects";
-const AI_API_URL = "https://collabsphere-api-70ke.onrender.com/api/ai";
-const FILE_API_URL = "https://collabsphere-api-70ke.onrender.com/api/files";
+const API_URL = `${API_ROOT}/projects`;
+const AI_API_URL = `${API_ROOT}/gemini`;
+const FILE_API_URL = `${API_ROOT}/files`;
 
 function App() {
   const [active, setActive] = useState("Overview");
@@ -73,6 +78,7 @@ function App() {
   const [code, setCode] = useState("");
   const [language, setLanguage] = useState("JavaScript");
   const [readmeResult, setReadmeResult] = useState("");
+  const [docsResult, setDocsResult] = useState("");
   const [explanationResult, setExplanationResult] = useState("");
   const [aiMessage, setAiMessage] = useState("");
 
@@ -92,6 +98,12 @@ const [activities, setActivities] = useState([]);
 const [activityLoading, setActivityLoading] = useState(false);
 const [activityMessage, setActivityMessage] = useState("");
 const [activityFilter, setActivityFilter] = useState("all");
+const [contributions, setContributions] = useState([]);
+const [shareLink, setShareLink] = useState("");
+const [shareMessage, setShareMessage] = useState("");
+const [filePreview, setFilePreview] = useState(null);
+const [filePreviewLoading, setFilePreviewLoading] = useState(false);
+const [fileExplainLoading, setFileExplainLoading] = useState(false);
 
   // Authentication config
   const getAuthConfig = () => ({
@@ -116,7 +128,11 @@ const [activityFilter, setActivityFilter] = useState("all");
       fetchMembers();
       setProjectFiles([]);
       setFileMessage("");
+      setContributions([]);
+      setShareLink("");
+      setShareMessage("");
       fetchProjectFiles();
+      fetchContributions();
     }
   }, [selectedProject?._id]);
 
@@ -191,6 +207,99 @@ const [activityFilter, setActivityFilter] = useState("all");
     }
   };
 
+  const fetchContributions = async () => {
+    if (!selectedProject?._id) return;
+    try {
+      const response = await axios.get(
+        `${API_URL}/${selectedProject._id}/contributions`,
+        getAuthConfig()
+      );
+      setContributions(response.data.contributions || []);
+    } catch (error) {
+      console.error("Could not load contribution analytics:", error);
+      setContributions([]);
+    }
+  };
+
+  const updateShareLink = async (enabled = true) => {
+    try {
+      setShareMessage("");
+      const response = await axios.post(
+        `${API_URL}/${selectedProject._id}/share`,
+        { enabled },
+        getAuthConfig()
+      );
+      if (!response.data.enabled) {
+        setShareLink("");
+        setShareMessage("Public share link disabled.");
+        return;
+      }
+      const url = `${window.location.origin}/share/${response.data.token}`;
+      setShareLink(url);
+      setShareMessage("Read-only share link is ready.");
+    } catch (error) {
+      setShareMessage(error.response?.data?.message || "Could not update share link.");
+    }
+  };
+
+  const openFilePreview = async (file) => {
+    if (filePreview?.kind === "image" && filePreview.content) {
+      URL.revokeObjectURL(filePreview.content);
+    }
+    setFilePreviewLoading(true);
+    setFilePreview({ file, kind: "loading", content: "" });
+    try {
+      const response = await axios.get(`${FILE_API_URL}/download/${file._id}`, {
+        ...getAuthConfig(),
+        responseType: "blob",
+      });
+      const extension = file.fileName.split(".").pop().toLowerCase();
+      const image = (file.mimeType || "").startsWith("image/") || ["png", "jpg", "jpeg", "gif", "webp", "svg"].includes(extension);
+      const text = (file.mimeType || "").startsWith("text/") || ["js", "jsx", "ts", "tsx", "json", "md", "txt", "html", "css", "py", "java", "c", "cpp", "yml", "yaml", "xml", "csv", "sh"].includes(extension);
+      if (image) {
+        const imageBlob = new Blob([response.data], { type: file.mimeType || "application/octet-stream" });
+        setFilePreview({ file, kind: "image", content: URL.createObjectURL(imageBlob) });
+      } else if (text) {
+        setFilePreview({ file, kind: "text", content: await response.data.text() });
+      } else {
+        setFilePreview({ file, kind: "unsupported", content: "Preview is available for image and text files." });
+      }
+    } catch (error) {
+      setFilePreview({ file, kind: "error", content: error.response?.data?.message || "Could not preview file." });
+    } finally {
+      setFilePreviewLoading(false);
+    }
+  };
+
+  const explainUploadedFile = async (file) => {
+    try {
+      setFileExplainLoading(true);
+      const response = await axios.get(`${FILE_API_URL}/download/${file._id}`, {
+        ...getAuthConfig(),
+        responseType: "blob",
+      });
+      const codeContent = await response.data.text();
+      const extension = file.fileName.split(".").pop().toLowerCase();
+      const result = await axios.post(
+        `${AI_API_URL}/explain`,
+        { code: codeContent, language: extension },
+        getAuthConfig()
+      );
+      setFilePreview({ file, kind: "text", content: codeContent, explanation: result.data.explanation });
+    } catch (error) {
+      setFileMessage(error.response?.data?.message || "Could not explain this file.");
+    } finally {
+      setFileExplainLoading(false);
+    }
+  };
+
+  const closeFilePreview = () => {
+    if (filePreview?.kind === "image" && filePreview.content) {
+      URL.revokeObjectURL(filePreview.content);
+    }
+    setFilePreview(null);
+  };
+
   // Fetch activities from all projects
 
 const fetchActivities = async () => {
@@ -199,7 +308,7 @@ const fetchActivities = async () => {
     setActivityMessage("");
 
     const response = await axios.get(
-      "https://collabsphere-api-70ke.onrender.com/api/activities",
+      `${API_ROOT}/activities`,
       getAuthConfig()
     );
 
@@ -228,7 +337,7 @@ const fetchActivities = async () => {
 const logActivity = async (projectId, action, description) => {
   try {
     await axios.post(
-      `https://collabsphere-api-70ke.onrender.com/api/activities/${projectId}`,
+      `${API_ROOT}/activities/${projectId}`,
       { action, description },
       getAuthConfig()
     );
@@ -397,6 +506,7 @@ const inviteMember = async (event) => {
     setTeamMessage("Member added successfully!");
 
     await fetchMembers();
+    await fetchContributions();
   } catch (error) {
     setTeamMessage(
       error.response?.data?.message || "Could not add member."
@@ -428,6 +538,7 @@ const removeMember = async (memberId) => {
     setTeamMessage("Member removed successfully.");
 
     await fetchMembers();
+    await fetchContributions();
   } catch (error) {
     setTeamMessage(
       error.response?.data?.message || "Could not remove member."
@@ -445,7 +556,7 @@ const removeMember = async (memberId) => {
       setReadmeResult("");
 
       const response = await axios.post(
-        `${AI_API_URL}/generate-readme`,
+        `${AI_API_URL}/readme`,
         readmeForm,
         getAuthConfig()
       );
@@ -455,6 +566,24 @@ const removeMember = async (memberId) => {
       setAiMessage(
         error.response?.data?.message || "README generation failed."
       );
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const generateDocumentation = async () => {
+    try {
+      setAiLoading(true);
+      setAiMessage("");
+      setDocsResult("");
+      const response = await axios.post(
+        `${AI_API_URL}/docs`,
+        readmeForm,
+        getAuthConfig()
+      );
+      setDocsResult(response.data.docs || response.data.documentation || "");
+    } catch (error) {
+      setAiMessage(error.response?.data?.message || "Documentation generation failed.");
     } finally {
       setAiLoading(false);
     }
@@ -475,7 +604,7 @@ const removeMember = async (memberId) => {
       setExplanationResult("");
 
       const response = await axios.post(
-        `${AI_API_URL}/explain-code`,
+        `${AI_API_URL}/explain`,
         { code, language },
         getAuthConfig()
       );
@@ -514,6 +643,7 @@ const removeMember = async (memberId) => {
       setFileMessage("Files uploaded successfully!");
 
       await fetchProjectFiles();
+      await fetchContributions();
     } catch (error) {
       console.error("File upload failed:", error);
 
@@ -574,6 +704,7 @@ const removeMember = async (memberId) => {
       );
 
       setFileMessage("File deleted successfully.");
+      await fetchContributions();
     } catch (error) {
       console.error("File deletion failed:", error);
 
@@ -595,6 +726,11 @@ const removeMember = async (memberId) => {
 
     closeForm();
   };
+
+  const shareMatch = window.location.pathname.match(/^\/share\/([^/]+)\/?$/);
+  if (shareMatch) {
+    return <PublicProjectView token={decodeURIComponent(shareMatch[1])} />;
+  }
 
   if (!user) {
     return <Auth onLogin={setUser} />;
@@ -833,6 +969,45 @@ const filteredActivities =
                       Open Team <ArrowUpRight size={16} />
                     </button>
                   </div>
+
+                  <section className="workspace-panel contribution-panel">
+                    <h2>Member Contributions</h2>
+                    <p className="page-description">Notes created and files uploaded by each project member.</p>
+                    {contributions.length === 0 ? <p>Contribution data is not available yet.</p> : (
+                      <div className="contribution-table-wrap">
+                        <table className="contribution-table">
+                          <thead><tr><th>Member</th><th>Notes created</th><th>Files uploaded</th></tr></thead>
+                          <tbody>{contributions.map((item) => (
+                            <tr key={item.member._id}>
+                              <td>{item.member.name || item.member.email}</td>
+                              <td>{item.notesCreated}</td>
+                              <td>{item.filesUploaded}</td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    )}
+                  </section>
+
+                  {String(selectedProject.owner?._id || selectedProject.owner) === String(user?.id || user?._id) && (
+                    <div className="settings-card share-project-card">
+                      <div className="settings-info">
+                        <h3>Public read-only link</h3>
+                        <p>Share this project overview, its notes, and file list without allowing edits.</p>
+                        {shareMessage && <p role="status">{shareMessage}</p>}
+                        {shareLink && <input aria-label="Public project link" readOnly value={shareLink} />}
+                      </div>
+                      <div className="share-project-actions">
+                        <button className="primary-button" onClick={() => updateShareLink(true)}>
+                          <Share2 size={16} /> {shareLink ? "Refresh link" : "Create link"}
+                        </button>
+                        {shareLink && <>
+                          <button className="settings-button" onClick={() => navigator.clipboard.writeText(shareLink)}><Copy size={16} /> Copy</button>
+                          <button className="settings-button" onClick={() => updateShareLink(false)}>Disable link</button>
+                        </>}
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
 
@@ -973,6 +1148,16 @@ const filteredActivities =
                             </p>
                           </div>
 
+                          <button className="settings-button" onClick={() => openFilePreview(file)}>
+                            <Eye size={16} /> Preview
+                          </button>
+
+                          {["js", "jsx", "ts", "tsx", "py", "java", "c", "cpp", "cs", "go", "rb", "php", "html", "css"].includes(file.fileName.split(".").pop().toLowerCase()) && (
+                            <button className="settings-button" disabled={fileExplainLoading} onClick={() => explainUploadedFile(file)}>
+                              <Sparkles size={16} /> Explain code
+                            </button>
+                          )}
+
                           <button
                             className="settings-button"
                             onClick={() => downloadFile(file)}
@@ -1002,7 +1187,11 @@ const filteredActivities =
                     Create and manage your Markdown notes.
                   </p>
 
-                  <Notes />
+                  <Notes
+                    projectId={selectedProject._id}
+                    projectName={selectedProject.name}
+                    onNotesChange={fetchContributions}
+                  />
                 </section>
               )}
 
@@ -1020,6 +1209,8 @@ const filteredActivities =
                     setReadmeForm={setReadmeForm}
                     generateReadme={generateReadme}
                     readmeResult={readmeResult}
+                    generateDocumentation={generateDocumentation}
+                    docsResult={docsResult}
                     code={code}
                     setCode={setCode}
                     language={language}
@@ -1358,6 +1549,25 @@ const filteredActivities =
         </div>
       </main>
 
+      {filePreview && (
+        <div className="modal-overlay" onClick={closeFilePreview}>
+          <section className="project-form file-preview-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="form-header">
+              <div><h2>{filePreview.file.fileName}</h2><p>Project file preview</p></div>
+              <button type="button" className="icon-button" onClick={closeFilePreview} aria-label="Close preview"><X size={19} /></button>
+            </div>
+            {filePreviewLoading || filePreview.kind === "loading" ? <p>Loading preview...</p> : (
+              <>
+                {filePreview.kind === "image" && <img className="file-preview-image" src={filePreview.content} alt={filePreview.file.fileName} />}
+                {filePreview.kind === "text" && <pre className="file-preview-text">{filePreview.content}</pre>}
+                {["unsupported", "error"].includes(filePreview.kind) && <p>{filePreview.content}</p>}
+                {filePreview.explanation && <div className="ai-result markdown-preview"><h3>Code explanation</h3><ReactMarkdown>{filePreview.explanation}</ReactMarkdown></div>}
+              </>
+            )}
+          </section>
+        </div>
+      )}
+
       {/* Create/Edit Project Modal */}
       {showForm && (
         <div className="modal-overlay">
@@ -1440,6 +1650,47 @@ const filteredActivities =
         </div>
       )}
     </div>
+  );
+}
+
+function PublicProjectView({ token }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    axios.get(`${API_URL}/public/${encodeURIComponent(token)}`)
+      .then((response) => { if (active) setData(response.data); })
+      .catch((error) => { if (active) setMessage(error.response?.data?.message || "This shared project is unavailable."); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [token]);
+
+  if (loading) return <main className="public-project-page"><p>Loading shared project…</p></main>;
+  if (message || !data) return <main className="public-project-page"><h1>Shared project unavailable</h1><p>{message || "This link may have been disabled."}</p></main>;
+
+  return (
+    <main className="public-project-page">
+      <header className="public-project-header">
+        <div><span className="project-status">Read only</span><h1>{data.project.name}</h1><p>{data.project.description || "No project description."}</p></div>
+        <span>CollabSphere</span>
+      </header>
+      <section className="public-project-section">
+        <h2>Project Notes</h2>
+        {data.notes.length ? data.notes.map((note) => (
+          <article className="note-card public-note-card" key={note._id}>
+            <h3>{note.title}</h3>
+            <div className="markdown-preview"><ReactMarkdown>{note.content || ""}</ReactMarkdown></div>
+            <small>Updated {new Date(note.updatedAt).toLocaleDateString()}</small>
+          </article>
+        )) : <p>No notes have been shared.</p>}
+      </section>
+      <section className="public-project-section">
+        <h2>Files</h2>
+        {data.files.length ? <ul>{data.files.map((file) => <li key={file._id}>{file.fileName}</li>)}</ul> : <p>No files have been shared.</p>}
+      </section>
+    </main>
   );
 }
 
@@ -1546,6 +1797,8 @@ function AIWorkspace({
   setReadmeForm,
   generateReadme,
   readmeResult,
+  generateDocumentation,
+  docsResult,
   code,
   setCode,
   language,
@@ -1649,6 +1902,23 @@ function AIWorkspace({
               <Sparkles size={17} />
             </button>
           </form>
+
+          <button
+            type="button"
+            className="settings-button"
+            disabled={aiLoading}
+            onClick={generateDocumentation}
+          >
+            {aiLoading ? "Generating..." : "Generate Documentation"}
+            <Sparkles size={17} />
+          </button>
+
+          {docsResult && (
+            <div className="ai-result markdown-preview">
+              <h3>Generated Documentation</h3>
+              <ReactMarkdown>{docsResult}</ReactMarkdown>
+            </div>
+          )}
 
           {readmeResult && (
             <div className="ai-result">
